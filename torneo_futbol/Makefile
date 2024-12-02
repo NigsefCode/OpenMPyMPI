@@ -5,7 +5,7 @@ TARGET=torneo
 all: $(TARGET)
 
 $(TARGET): src/main.c
-	$(CC) $(CFLAGS) -o $@ $
+	$(CC) $(CFLAGS) src/main.c -o $(TARGET)
 
 clean:
 	rm -f $(TARGET)
