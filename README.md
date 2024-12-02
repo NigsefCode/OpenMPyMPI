@@ -36,37 +36,48 @@ Una vez corroborada la instalación de los requisitos previos, puede seguir los 
       cd <nombre-del-directorio>
     ```
 
-## Estructura del Proyecto
+## Caracteristicas del Proyecto
+### Estructura
 
 - `src/main.c`: Archivo principal con la implementación
 - `Makefile`: Archivo de configuración para compilación
 
-## Detalles de Implementación
+### Detalles de Implementación
 - Cada país (nodo MPI) maneja 20 equipos
 - Cada equipo tiene 25 jugadores
 - Los jugadores tienen un rendimiento aleatorio por partido
 
-## Funcionamiento
+### Funcionamiento
 - Cada nodo MPI representa un país
 - Los partidos se juegan en formato todos contra todos
 - OpenMP paraleliza el cálculo del rendimiento de jugadores
 - Sistema de puntos: 3 por victoria, 1 por empate, 0 por derrota
 
-## Compilación y Ejecución
+### Compilación y Ejecución
 ```bash
     make
     mpirun -np 8 ./torneo
 ```
 
-## Clasificación
+### Clasificación
 - Los 2 mejores equipos de cada país clasifican
 - Proceso de clasificación:
   1. Ordenamiento por puntos
   2. Selección de mejores equipos
   3. Envío de clasificados al nodo principal
 
-## Fase Eliminatoria
-- Los equipos clasificados compiten en eliminación directa
-- El rendimiento se recalcula en cada partido
-- El ganador avanza a la siguiente ronda
-- La fase continúa hasta tener un campeón
+### Fases del torneo
+1. Liga Local
+   - Formato todos contra todos
+   - 3 puntos victoria, 1 empate, 0 derrota
+   - Clasifican 2 mejores equipos por país
+     
+3. Fase Eliminatoria
+   - Los equipos clasificados compiten en eliminación directa
+   - Participan 16 equipos (2 por país)
+   - Emparejamientos aleatorios
+   - Un solo campeón
+
+### Paralelización
+- `MPI:` Distribuye los países en diferentes nodos
+- `OpenMP:` Paraleliza cálculos de rendimiento de jugadores
