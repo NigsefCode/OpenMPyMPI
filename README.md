@@ -15,13 +15,6 @@ Antes de comenzar con la ejecución del proyecto, asegurarse de tener lo siguien
 2. **OpenMP**
 3. **GCC con Soporte OpenMP**
 
-En caso de no tener instalador **_OpenMP_**, puede instalarlo de la siguiente manera:
-  ```bash
-  sudo apt-get install -y build-essential
-  sudo apt-get install -y openmpi-bin openmpi-common libopenmpi-dev
-  sudo apt-get install -y gcc-multilib
-  ```
-
 ### Configuración y Ejecución
 Una vez corroborada la instalación de los requisitos previos, puede seguir los siguientes pasos:
 
@@ -34,6 +27,14 @@ Una vez corroborada la instalación de los requisitos previos, puede seguir los 
     ```bash
       git clone <url-del-repositorio>
       cd <nombre-del-directorio>
+    ```
+3. **OpenMP**
+
+   En caso de no tener instalador **_OpenMP_**, puede instalarlo de la siguiente manera:
+    ```bash
+      sudo apt-get install -y build-essential
+      sudo apt-get install -y openmpi-bin openmpi-common libopenmpi-dev
+      sudo apt-get install -y gcc-multilib
     ```
 
 ## Caracteristicas del Proyecto
@@ -56,7 +57,7 @@ Una vez corroborada la instalación de los requisitos previos, puede seguir los 
 ### Compilación y Ejecución
 ```bash
     make
-    mpirun -np 8 ./torneo
+    mpirun --oversubscribe -np 8 ./torneo
 ```
 
 ### Clasificación
@@ -81,3 +82,15 @@ Una vez corroborada la instalación de los requisitos previos, puede seguir los 
 ### Paralelización
 - `MPI:` Distribuye los países en diferentes nodos
 - `OpenMP:` Paraleliza cálculos de rendimiento de jugadores
+
+## Resultados
+El programa muestra:
+- Progreso de la liga local por país
+- Tabla de clasificación
+- Árbol de eliminatorias
+- Estadísticas del campeón
+
+## Limitaciones
+- Requiere exactamente 8 procesos MPI
+- No persiste resultados entre ejecuciones
+- Emparejamientos aleatorios pueden repetirse
