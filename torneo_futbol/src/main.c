@@ -5,10 +5,12 @@
 #include <time.h>
 #include <string.h>
 
-#define NUM_JUGADORES 25
-#define NUM_EQUIPOS 20
-#define NUM_PAISES 8
+/* Definición de constantes del torneo */
+#define NUM_JUGADORES 25  // Jugadores por equipo
+#define NUM_EQUIPOS 20    // Equipos por país
+#define NUM_PAISES 8      // Total de países participantes
 
+/* Estructuras de datos principales */
 typedef struct {
    int id;
    int rendimiento;
@@ -17,11 +19,12 @@ typedef struct {
 typedef struct {
    int id;
    char nombre[50];
-   Jugador jugadores[NUM_JUGADORES];
-   Jugador titulares[11];
+   Jugador jugadores[NUM_JUGADORES];  // Plantel completo
+   Jugador titulares[11];             // 11 mejores para cada partido
    int puntos;
 } Equipo;
 
+/* Estructuras para estadísticas y seguimiento */
 typedef struct {
    int victorias;
    int empates;
@@ -37,22 +40,27 @@ typedef struct {
 
 typedef struct {
    EquipoClasificado equipo;
-   int activo;
+   int activo;  // Control de equipos eliminados
 } EquipoEliminatoria;
 
+/* Inicialización del plantel de jugadores */
 void inicializar_jugadores(Jugador *jugadores) {
+   #pragma omp parallel for
    for(int i = 0; i < NUM_JUGADORES; i++) {
        jugadores[i].id = i;
        jugadores[i].rendimiento = 0;
    }
 }
 
+/* Selección optimizada de los 11 mejores jugadores */
 void seleccionar_titulares(Equipo *equipo) {
+   // Generación paralela de rendimientos
    #pragma omp parallel for
    for(int i = 0; i < NUM_JUGADORES; i++) {
        equipo->jugadores[i].rendimiento = rand() % 99 + 1;
    }
    
+   // Ordenamiento para seleccionar los 11 mejores
    for(int i = 0; i < NUM_JUGADORES - 1; i++) {
        for(int j = 0; j < NUM_JUGADORES - i - 1; j++) {
            if(equipo->jugadores[j].rendimiento < equipo->jugadores[j + 1].rendimiento) {
@@ -63,14 +71,19 @@ void seleccionar_titulares(Equipo *equipo) {
        }
    }
    
+   // Selección de los 11 mejores
+   #pragma omp parallel for
    for(int i = 0; i < 11; i++) {
        equipo->titulares[i] = equipo->jugadores[i];
    }
 }
 
+/* Cálculo paralelo del rendimiento del equipo */
 int calcular_rendimiento_equipo(Equipo *equipo) {
    seleccionar_titulares(equipo);
    int total = 0;
+   
+   // Suma paralela de rendimientos usando reduction
    #pragma omp parallel for reduction(+:total)
    for(int i = 0; i < 11; i++) {
        total += equipo->titulares[i].rendimiento;
@@ -78,10 +91,12 @@ int calcular_rendimiento_equipo(Equipo *equipo) {
    return total;
 }
 
+/* Simulación de partido con gestión de resultados */
 void jugar_partido(Equipo *equipo1, Equipo *equipo2, Estadisticas *stats1, Estadisticas *stats2) {
    int rendimiento1 = calcular_rendimiento_equipo(equipo1);
    int rendimiento2 = calcular_rendimiento_equipo(equipo2);
    
+   // Asignación de puntos y actualización de estadísticas
    if(rendimiento1 > rendimiento2) {
        equipo1->puntos += 3;
        stats1->victorias++;
@@ -93,6 +108,7 @@ void jugar_partido(Equipo *equipo1, Equipo *equipo2, Estadisticas *stats1, Estad
        stats1->derrotas++;
        stats2->goles_favor++;
    } else {
+       // Manejo de empates
        equipo1->puntos += 1;
        equipo2->puntos += 1;
        stats1->empates++;
@@ -100,6 +116,7 @@ void jugar_partido(Equipo *equipo1, Equipo *equipo2, Estadisticas *stats1, Estad
    }
 }
 
+/* Ordenamiento de equipos por puntos */
 void ordenar_equipos(Equipo *equipos) {
    for(int i = 0; i < NUM_EQUIPOS - 1; i++) {
        for(int j = 0; j < NUM_EQUIPOS - i - 1; j++) {
@@ -112,6 +129,7 @@ void ordenar_equipos(Equipo *equipos) {
    }
 }
 
+/* Simulación de partido eliminatorio */
 void jugar_partido_eliminatorio(EquipoEliminatoria *equipo1, EquipoEliminatoria *equipo2) {
    int rend1 = calcular_rendimiento_equipo(&equipo1->equipo.equipo);
    int rend2 = calcular_rendimiento_equipo(&equipo2->equipo.equipo);
@@ -120,6 +138,7 @@ void jugar_partido_eliminatorio(EquipoEliminatoria *equipo1, EquipoEliminatoria 
           equipo1->equipo.equipo.nombre, rend1,
           equipo2->equipo.equipo.nombre, rend2);
           
+   // Determinación del ganador y actualización de estado
    if(rend1 >= rend2) {
        equipo2->activo = 0;
        equipo1->equipo.stats.victorias++;
@@ -131,6 +150,7 @@ void jugar_partido_eliminatorio(EquipoEliminatoria *equipo1, EquipoEliminatoria 
    }
 }
 
+/* Mezcla aleatoria para emparejamientos */
 void mezclar_equipos_eliminatoria(EquipoEliminatoria *equipos, int n) {
    for(int i = n-1; i > 0; i--) {
        int j = rand() % (i + 1);
@@ -143,20 +163,23 @@ void mezclar_equipos_eliminatoria(EquipoEliminatoria *equipos, int n) {
 int main(int argc, char *argv[]) {
    int rank, size;
    
+   // Inicialización MPI
    MPI_Init(&argc, &argv);
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
    MPI_Comm_size(MPI_COMM_WORLD, &size);
    
-   srand(time(NULL) + rank);
+   srand(time(NULL) + rank); // Semilla única por proceso
    
    if(rank == 0) {
        printf("\n=== INICIO DEL TORNEO ===\n\n");
        printf("[FASE DE GRUPOS]\n");
    }
    
+   // Inicialización de estructuras locales
    Equipo equipos[NUM_EQUIPOS];
    Estadisticas stats[NUM_EQUIPOS] = {0};
    
+   // Inicialización de equipos
    for(int i = 0; i < NUM_EQUIPOS; i++) {
        equipos[i].id = i;
        sprintf(equipos[i].nombre, "Equipo%d_Pais%d", i, rank);
@@ -164,6 +187,7 @@ int main(int argc, char *argv[]) {
        inicializar_jugadores(equipos[i].jugadores);
    }
    
+   // Sincronización para inicio de liga local
    MPI_Barrier(MPI_COMM_WORLD);
    for(int i = 0; i < size; i++) {
        if(rank == i) {
@@ -172,6 +196,7 @@ int main(int argc, char *argv[]) {
        MPI_Barrier(MPI_COMM_WORLD);
    }
    
+   // Liga local: todos contra todos
    int num_partidos = 0;
    for(int i = 0; i < NUM_EQUIPOS; i++) {
        for(int j = i + 1; j < NUM_EQUIPOS; j++) {
@@ -182,6 +207,7 @@ int main(int argc, char *argv[]) {
    
    ordenar_equipos(equipos);
    
+   // Mostrar resultados de liga local sincronizadamente
    MPI_Barrier(MPI_COMM_WORLD);
    for(int i = 0; i < size; i++) {
        if(rank == i) {
@@ -193,6 +219,7 @@ int main(int argc, char *argv[]) {
        MPI_Barrier(MPI_COMM_WORLD);
    }
    
+   // Preparación de clasificados
    EquipoClasificado clasificados[2];
    for(int i = 0; i < 2; i++) {
        clasificados[i].equipo = equipos[i];
@@ -200,6 +227,7 @@ int main(int argc, char *argv[]) {
        clasificados[i].stats = stats[i];
    }
    
+   // Envío de clasificados al proceso principal
    if(rank != 0) {
        MPI_Send(clasificados, sizeof(EquipoClasificado) * 2, MPI_BYTE, 0, 0, MPI_COMM_WORLD);
    } else {
@@ -207,6 +235,7 @@ int main(int argc, char *argv[]) {
        EquipoClasificado todos_clasificados[NUM_PAISES * 2];
        memcpy(&todos_clasificados[0], clasificados, sizeof(EquipoClasificado) * 2);
        
+       // Recolección de clasificados
        for(int i = 1; i < size; i++) {
            MPI_Recv(&todos_clasificados[i * 2], sizeof(EquipoClasificado) * 2, 
                    MPI_BYTE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -228,20 +257,24 @@ int main(int argc, char *argv[]) {
        
        printf("\n[FASE ELIMINATORIA]\n");
        
+       // Preparación fase eliminatoria
        EquipoEliminatoria eliminatoria[NUM_PAISES * 2];
        for(int i = 0; i < NUM_PAISES * 2; i++) {
            eliminatoria[i].equipo = todos_clasificados[i];
            eliminatoria[i].activo = 1;
        }
 
+       // Mezcla aleatoria para emparejamientos
        mezclar_equipos_eliminatoria(eliminatoria, NUM_PAISES * 2);
        
+       // Ejecución de rondas eliminatorias
        int ronda = 1;
        int equipos_activos = NUM_PAISES * 2;
        while(equipos_activos > 1) {
            printf("\nRonda %d:\n", ronda++);
            int partidos_jugados = 0;
            
+           // Jugar partidos de la ronda
            for(int i = 0; i < NUM_PAISES * 2 - 1; i += 2) {
                if(eliminatoria[i].activo && eliminatoria[i+1].activo) {
                    printf("\nPartido %d:\n", partidos_jugados + 1);
@@ -257,6 +290,7 @@ int main(int argc, char *argv[]) {
            
            if(partidos_jugados == 0) break;
            
+           // Mostrar clasificados a siguiente ronda
            equipos_activos = 0;
            printf("\nClasificados a siguiente ronda:\n");
            for(int i = 0; i < NUM_PAISES * 2; i++) {
@@ -273,6 +307,7 @@ int main(int argc, char *argv[]) {
            }
        }
        
+       // Mostrar campeón
        printf("\n=== CAMPEÓN DEL TORNEO ===\n");
        for(int i = 0; i < NUM_PAISES * 2; i++) {
            if(eliminatoria[i].activo) {
