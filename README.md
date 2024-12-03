@@ -16,7 +16,7 @@ Antes de comenzar con la ejecución del proyecto, asegurarse de tener lo siguien
 3. **GCC con Soporte OpenMP**
 
 ### Configuración y Ejecución
-Una vez corroborada la instalación de los requisitos previos, puede seguir los siguientes pasos:
+Una vez corroborada la instalación de los requisitos previos, o puede seguir los siguientes pasos:
 
 1. **Actualizar el Sistema Operativo.**
     ```bash
@@ -94,3 +94,35 @@ El programa muestra:
 - Requiere exactamente 8 procesos MPI
 - No persiste resultados entre ejecuciones
 - Emparejamientos aleatorios pueden repetirse
+
+## Parámetros Modificables
+
+El programa permite la modificación de varios parámetros para personalizar el torneo, en caso de querer hacerlo, por ejemplo el ajuste del tamaño del torneo, cambiar el sistema de puntuación, entre otros (cabe mencionar que cualquier error ocacionado, deberá arreglarlo la persona que modificó el código):
+> **Nota**: Al modificar estos valores, asegúrese de mantener la coherencia en todo el código. Por ejemplo, si cambia NUM_PAISES, debe ejecutar el programa con la misma cantidad de procesos MPI (-np).
+
+### Constantes Principales
+```c
+#define NUM_JUGADORES 25  // Cantidad de jugadores por equipo
+#define NUM_EQUIPOS 20    // Cantidad de equipos por país
+#define NUM_PAISES 8      // Total de países participantes
+```
+
+### Cálculo de Rendimiento
+```c
+// En la función seleccionar_titulares()
+equipo->jugadores[i].rendimiento = rand() % 99 + 1;  // Rango de rendimiento: 1-99
+```
+
+### Sistema de puntos
+```c
+// En la función jugar_partido()
+if(rendimiento1 > rendimiento2) {
+    equipo1->puntos += 3;    // Puntos por victoria
+} else if(rendimiento2 > rendimiento1) {
+    equipo2->puntos += 3;    // Puntos por victoria
+} else {
+    equipo1->puntos += 1;    // Puntos por empate
+    equipo2->puntos += 1;    // Puntos por empate
+}
+```
+> **Nota**: Cada cambio queda a responsabilidad del usuario.
